@@ -23,30 +23,39 @@ void handleStopButton() {
     if (matchTimerLoopRunning()) {
       stopMatch();
     } else {
-        //  Reset the system state
+      //  Reset the system state
     }
-    
   }
 }
 
-void handlePitOpenButton() {
-  if (buttonPressed(PitOpen)) {
-    Serial.println("handlePitOpenButton HIGH");
-    handleOpenPit();
+void handlePitManualSolenoidButton() {
+  if (buttonPressed(PitSolenoid)) {
+    Serial.println("handlePitManualSolenoidButton HIGH");
+    enablePitSolenoid();
   } else {
     if (pitState != Opening) {
-      digitalWrite(PIN_RELAY_SOLENOID, LOW);
+      disablePitSolenoid();
     }
   }
 }
-void handlePitCloseButton() {
-  if (buttonPressed(PitClose)) {
-    Serial.println("handlePitCloseButton HIGH");
-    handlePitClose();
-  } else {
-    if (pitState != Opening) {
-      digitalWrite(PIN_RELAY_SOLENOID, LOW);
+
+void handlePitManualOpenButton() {
+  if (buttonPressed(PitOpen) && (!buttonPressed(PitClose))) {
+    Serial.println("handlePitManualOpenButton HIGH");
+    handlePitManualOpen();
+  }
+}
+
+void handlePitManualCloseButton() {
+  if (buttonPressed(PitClose) && !buttonPressed(PitOpen)) {
+      Serial.println("handlePitManualCloseButton HIGH");
+      handlePitManualClose();
     }
+}
+
+void tryStopMotor() {
+  if (!buttonPressed(PitOpen) && !buttonPressed(PitClose) && pitState != Opening && pitState != Closing) {
+    stopPitMotor();
   }
 }
 

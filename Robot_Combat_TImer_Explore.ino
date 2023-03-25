@@ -4,6 +4,7 @@
 #include <Adafruit_SSD1306.h>
 #include <AsyncTimer.h>
 #include <Wire.h>
+#include <Servo.h>
 /**
 AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
 
@@ -62,7 +63,7 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
 #define PIN_PIT_OPEN_LED 11
 #define PIN_PIT_CLOSE_LED 12
 #define PIN_RS485_ENABLE 2
-#define PIN_RGB_LED_STRIP 11
+#define PIN_RGB_LED_STRIP 13
 #define PIN_MOTOR_ESC 15
 #define PIN_RELAY_SOLENOID 14
 
@@ -103,6 +104,7 @@ enum Button {
   Pause,
   Stop,
   AddTime,
+  PitSolenoid,
   PitOpen,
   PitClose,
   PitDisable
@@ -123,7 +125,9 @@ enum PitState {
   Closing,
   Closed
 };
-
+#define PIT_MOTOR_PWM_FWD 2000
+#define PIT_MOTOR_PWM_REV 1000
+#define PIT_MOTOR_PWM_STOP 1500
 
 // Application State
 MatchState matchState = Ready;
@@ -135,12 +139,14 @@ int remainingTime = 0;
 bool pitEnabled = true;
 PitState pitState = Closed;
 unsigned short addTimeButtonTimeout = 0;
+int motorPWM = 0;
 
 // Init Libs
 CRGB leds[NUM_LEDS];
 AsyncTimer t;
 Adafruit_7segment clockDisplay = Adafruit_7segment();
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+Servo pitMotor;  // create servo object to control a servo
 
 
 // Arduino Setup
@@ -166,9 +172,10 @@ void setup() {
 
 
 
-  // clockDisplay.begin(CLOCK_DISPLAY_1_ADDRESS);
+  clockDisplay.begin(CLOCK_DISPLAY_1_ADDRESS);
   FastLED.addLeds<WS2812, PIN_RGB_LED_STRIP, RGB>(leds, NUM_LEDS);  // GRB ordering is typical
   FastLED.setBrightness(50);
+  pitMotor.attach(PIN_MOTOR_ESC);
   if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_ADDRESS)) {  // Address 0x3D for 128x64
     Serial.println(F("SSD1306 allocation failed"));
     for (;;)
@@ -183,7 +190,7 @@ void setup() {
   display.println("Michigan");
   display.println("Mashup");
   display.display();
-  clockDisplay.print(8888, DEC);
+  clockDisplay.print(1234, DEC);
   clockDisplay.writeDisplay();
   delay(1000);
   display.clearDisplay();
@@ -207,11 +214,13 @@ void loop() {
   handlePauseButton();
   handleStopButton();
   handleAddTimeButton();
-  handlePitOpenButton();
+  handlePitManualOpenButton();
+  handlePitManualCloseButton();
+  handlePitManualSolenoidButton();
   handlePitDisableButton();
 
 
-
+  tryStopMotor();
 
   if (matchState == Ready) {
   }

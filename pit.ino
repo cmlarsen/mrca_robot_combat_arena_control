@@ -1,18 +1,48 @@
 
 void handleOpenPit() {
   setPitState(Opening);
-  digitalWrite(PIN_RELAY_SOLENOID, HIGH);
-  
+  enablePitSolenoid();
+  fowardPitMotor();
   t.setTimeout([=]() {
-    digitalWrite(PIN_RELAY_SOLENOID, LOW);
+    disablePitSolenoid();
+    stopPitMotor();
     setPitState(Open);
   },
                PIT_RELAY_ENABLE_DURATION);
 }
 
-void handlePitClose() {
-  setPitState(Closing);
-  Serial.println("Close Pit");
+void handlePitManualClose() {
+  // setPitState(Closing);
+  reversePitMotor();
+}
+
+void handlePitManualOpen() {
+  // setPitState(Opening);
+  fowardPitMotor();
+}
+
+void enablePitSolenoid() {
+  digitalWrite(PIN_RELAY_SOLENOID, HIGH);
+}
+
+void disablePitSolenoid() {
+  digitalWrite(PIN_RELAY_SOLENOID, LOW);
+}
+
+void fowardPitMotor() {
+  digitalWrite(PIN_PIT_OPEN_LED, HIGH);
+  pitMotor.writeMicroseconds(PIT_MOTOR_PWM_FWD);
+}
+
+void reversePitMotor() {
+  digitalWrite(PIN_PIT_CLOSE_LED, HIGH);
+  pitMotor.writeMicroseconds(PIT_MOTOR_PWM_REV);
+}
+
+void stopPitMotor() {
+  digitalWrite(PIN_PIT_OPEN_LED, LOW);
+  digitalWrite(PIN_PIT_CLOSE_LED, LOW);
+  pitMotor.writeMicroseconds(PIT_MOTOR_PWM_STOP);
 }
 
 void setPitState(PitState s) {
