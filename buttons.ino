@@ -2,6 +2,7 @@
 // ########## Button Handlers
 void handleStartButton() {
   if (buttonPressed(Start) && !buttonPressed(Pause)) {
+    Serial.println("Start");
     if (!matchTimerLoopRunning() && matchState == Ready) {
       startMatch();
     } else if (matchState == Paused) {
@@ -12,6 +13,7 @@ void handleStartButton() {
 
 void handlePauseButton() {
   if (buttonPressed(Pause) && !buttonPressed(Start)) {
+    Serial.println("Pause");
     if (matchTimerLoopRunning() && matchState == Running) {
       pauseMatch();
     }
@@ -20,6 +22,7 @@ void handlePauseButton() {
 
 void handleStopButton() {
   if (buttonPressed(Stop)) {
+    Serial.println("Stop");
     if (matchTimerLoopRunning()) {
       stopMatch();
     } else {
@@ -30,7 +33,8 @@ void handleStopButton() {
 
 void handlePitManualSolenoidButton() {
   if (buttonPressed(PitSolenoid)) {
-    Serial.println("handlePitManualSolenoidButton HIGH");
+    Serial.println("PitSolenoid");
+    
     enablePitSolenoid();
   } else {
     if (pitState != Opening) {
@@ -41,27 +45,35 @@ void handlePitManualSolenoidButton() {
 
 void handlePitManualOpenButton() {
   if (buttonPressed(PitOpen) && (!buttonPressed(PitClose))) {
-    Serial.println("handlePitManualOpenButton HIGH");
+    Serial.println("PitOpen");
+    
     handlePitManualOpen();
   }
 }
 
 void handlePitManualCloseButton() {
   if (buttonPressed(PitClose) && !buttonPressed(PitOpen)) {
-      Serial.println("handlePitManualCloseButton HIGH");
-      handlePitManualClose();
-    }
+    Serial.println("PitClose");
+    
+    handlePitManualClose();
+  }
 }
 
 void tryStopMotor() {
-  if (!buttonPressed(PitOpen) && !buttonPressed(PitClose) && pitState != Opening && pitState != Closing) {
+  Serial.print("!buttonPressed(PitOpen)");
+  Serial.println(!buttonPressed(PitOpen));
+  Serial.print("!buttonPressed(PitClose)");
+  Serial.println(!buttonPressed(PitClose));
+  if (buttonPressed(PitOpen) && buttonPressed(PitClose)) {
+    
     stopPitMotor();
   }
 }
 
 void handleAddTimeButton() {
   if (buttonPressed(AddTime)) {
-    Serial.print("handleAddTimeButton");
+
+    Serial.println("AddTime");
     if (addTimeButtonTimeout != 0) {
       t.reset(addTimeButtonTimeout);
     } else {

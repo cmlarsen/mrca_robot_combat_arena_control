@@ -48,14 +48,14 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
 
 
 // PINS - Input
-#define PIN_BUTTON_START 3
-#define PIN_BUTTON_PAUSE 4
-#define PIN_BUTTON_STOP 5
-#define PIN_BUTTON_ADD_TIME 6
-#define PIN_PIT_OPEN 7
-#define PIN_PIT_CLOSE 8
-#define PIN_PIT_DISABLE 9
-#define PIN_PIT_SOLENOID_ENABLE 10
+#define PIN_BUTTON_START 4
+#define PIN_BUTTON_PAUSE 3
+#define PIN_BUTTON_STOP 6
+#define PIN_BUTTON_ADD_TIME 5
+#define PIN_PIT_OPEN 9
+#define PIN_PIT_CLOSE 7
+#define PIN_PIT_DISABLE 10
+#define PIN_PIT_SOLENOID_ENABLE 8
 
 
 
