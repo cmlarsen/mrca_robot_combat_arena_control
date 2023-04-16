@@ -1,4 +1,4 @@
-// ########## Outputs
+// ########## Remote Timer Pod
 
 
 void updateTimerDisplay() {
@@ -9,4 +9,6 @@ void updateTimerDisplay() {
   clockDisplay.drawColon(true);
   clockDisplay.print(displayTime, DEC);
   clockDisplay.writeDisplay();
+  // ########## Remote Timer Pod
+  remoteData.timerDisplayValue = displayTime;
 }

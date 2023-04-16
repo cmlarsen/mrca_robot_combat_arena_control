@@ -13,7 +13,7 @@ void startMatch() {
 
 void pauseMatch() {
   Serial.println("pauseMatch");
-  beep(1000, BeepHigh);
+  beep(1000);
   setLEDs(Yellow);
   matchState = Paused;
 }
@@ -29,7 +29,7 @@ void stopMatch() {
   Serial.println("stopMatch");
   matchState = Stopped;
   setLEDs(Red);
-  beep(2000, BeepHigh);
+  beep(2000);
   t.cancel(matchIntervalId);
 
   // Turn LEDs White after a while
@@ -44,7 +44,7 @@ void readyMatch() {
   matchState = Ready;
   setLEDs(White);
   remainingTime = MATCH_DURATION;
-  updateTimerDisplay();
+  // updateTimerDisplay();
   pitState = Closed;
 }
 

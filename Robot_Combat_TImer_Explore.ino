@@ -1,3 +1,4 @@
+#include <EasyTransfer.h>
 #include <Adafruit_GFX.h>
 #include "Adafruit_LEDBackpack.h"
 #include <FastLED.h>
@@ -11,7 +12,7 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
   Arduino Nano Every pinout: https://www.etechnophiles.com/wp-content/uploads/2021/05/Arduino-Every-Pinout.png?ezimgfmt=ng:webp/ngcb40
   Arduino Nano Every details: https://www.etechnophiles.com/arduino-nano-every-pinout-specifications-schematic-datasheet/
   Fast LED API: http://fastled.io/docs/3.1/index.html
-  Fast LED API Docs? : https://dmadison.github.io/FastLED/docs/index.html
+  Fast LED API Docs? : https://dmadison.github.io/FastLED/docss/index.html
   Adafruit LED Backpack Docs: https://github.com/adafruit/Adafruit_LED_Backpack
 
 
@@ -23,7 +24,7 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
   Stop - stops match;
   Add Time - adds 5 seconds per press;
 
-  * These aren't connected to arduino  
+  * These aren't connected to arduino
   Close Pit - Nothing, wired to the motors.
   Master Power - Disables power to system
 
@@ -31,31 +32,43 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
   OLED
   Clocks
   Pit Solenoid Relay
-  Buzzer via NMOS
+  Buzzer
 
   TODO:
   - Use the easyTransfer TX/RX examples to send messages to slaves via RS485
-  - Layout Timer/Buzzer displays and print boxes for them
-  - Output PWM for Motor control WASP
   - Add button combo to set 3 min match
   - Make sure timer updates when time is added.
   - Add LEDs for Pit Open/Pit Close
+**/
 
-  
+
+/**
+Pin 
+2 = RS485 Enable
+3 = RGBLED data
+4 = Disable pit
+A3 = Closing LED
+A2 = Opening LED
+
+CAT5
+Blue
+Green
+Blue Stripe
+Green Stripe
+
 **/
 
 
 
-
 // PINS - Input
-#define PIN_BUTTON_START 4
-#define PIN_BUTTON_PAUSE 3
-#define PIN_BUTTON_STOP 6
-#define PIN_BUTTON_ADD_TIME 5
-#define PIN_PIT_OPEN 9
-#define PIN_PIT_CLOSE 7
-#define PIN_PIT_DISABLE 10
-#define PIN_PIT_SOLENOID_ENABLE 8
+#define PIN_BUTTON_PAUSE 9
+#define PIN_BUTTON_START 8
+#define PIN_BUTTON_ADD_TIME 10
+#define PIN_BUTTON_STOP 11
+#define PIN_PIT_CLOSE 5
+#define PIN_PIT_SOLENOID_ENABLE 6
+#define PIN_PIT_OPEN 7
+#define PIN_PIT_DISABLE 4
 
 
 
@@ -141,17 +154,25 @@ PitState pitState = Closed;
 unsigned short addTimeButtonTimeout = 0;
 int motorPWM = 0;
 
+struct SEND_DATA_STRUCTURE {
+  //put your variable definitions here for the data you want to send
+  //THIS MUST BE EXACTLY THE SAME ON THE OTHER ARDUINO
+  int16_t timerDisplayValue;
+  bool buzzerOn;
+};
+SEND_DATA_STRUCTURE remoteData;
 // Init Libs
 CRGB leds[NUM_LEDS];
 AsyncTimer t;
 Adafruit_7segment clockDisplay = Adafruit_7segment();
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 Servo pitMotor;  // create servo object to control a servo
-
+EasyTransfer ET;
 
 // Arduino Setup
 void setup() {
   Serial.begin(9600);
+  Serial1.begin(9600);
   Serial.println("Setup");
   // PINS - Input
   pinMode(PIN_BUTTON_START, INPUT_PULLUP);
@@ -169,9 +190,8 @@ void setup() {
   pinMode(PIN_RGB_LED_STRIP, OUTPUT);
   pinMode(PIN_MOTOR_ESC, OUTPUT);
   pinMode(PIN_RELAY_SOLENOID, OUTPUT);
-
-
-
+  digitalWrite(PIN_RS485_ENABLE, HIGH);
+  ET.begin(details(remoteData), &Serial1);
   clockDisplay.begin(CLOCK_DISPLAY_1_ADDRESS);
   FastLED.addLeds<WS2812, PIN_RGB_LED_STRIP, RGB>(leds, NUM_LEDS);  // GRB ordering is typical
   FastLED.setBrightness(50);
@@ -231,6 +251,9 @@ void loop() {
   }
 
   updateOLED();
+  updateTimerDisplay();
+  ET.sendData();
+  delay(50);
 }
 
 // The main loop for the match logic.
@@ -242,7 +265,7 @@ void matchLoop() {
 
     Serial.print("Tick: ");
     Serial.println(elapsedTime);
-    updateTimerDisplay();
+    // updateTimerDisplay();
   }
   if (pitEnabled && elapsedTime == PIT_OPEN_AFTER_TIME) {
     handleOpenPit();

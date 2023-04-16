@@ -17,10 +17,10 @@ bool buttonPressed(Button button) {
   switch (button) {
     case Start:
       // Serial.println("Btn Start");
-      return digitalRead(PIN_BUTTON_START) == LOW;
+      return digitalRead(PIN_BUTTON_START) == HIGH;
     case Pause:
       // Serial.println("Btn Pause");
-      return digitalRead(PIN_BUTTON_PAUSE) == LOW;
+      return digitalRead(PIN_BUTTON_PAUSE) == HIGH;
     case Stop:
       // Serial.println("Btn Stop");
       return digitalRead(PIN_BUTTON_STOP) == HIGH;
@@ -29,10 +29,10 @@ bool buttonPressed(Button button) {
       return digitalRead(PIN_BUTTON_ADD_TIME) == HIGH;
     case PitOpen:
       // Serial.println("Btn PitOpen");
-      return digitalRead(PIN_PIT_OPEN) == LOW;
+      return digitalRead(PIN_PIT_OPEN) == HIGH;
     case PitClose:
       // Serial.println("Btn PitClose");
-      return digitalRead(PIN_PIT_CLOSE) == LOW;
+      return digitalRead(PIN_PIT_CLOSE) == HIGH;
     case PitSolenoid:
       // Serial.println("Btn PitSolenoid");
       return digitalRead(PIN_PIT_SOLENOID_ENABLE) == HIGH;

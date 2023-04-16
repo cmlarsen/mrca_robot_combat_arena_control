@@ -1,9 +1,9 @@
 // ########## Sequences
 //Run at startup, beep and blink a bit
 void selfCheckSequence() {
-  beep(150, BeepLow);
+  beep(150);
   delay(500);
-  beep(150, BeepHigh);
+  beep(150);
   blink(1000, Red);
   blink(1000, Black);
   blink(1000, Yellow);
@@ -13,19 +13,20 @@ void selfCheckSequence() {
   setLEDs(White);
 }
 
-// A blocking sequence of beeps and lights that plays before the match starts or resumes
+// A sequence of beeps and lights that plays before the match starts or resumes
+// TODO this might not work as expected
 int runMatchIntroSequence() {
   Serial.println("Match Intro Sequence Running - Beep, beep, beep, BEEEEEEP");
   for (int i = 0; i < 3; i++) {
-    beepSync(BeepLow);
+    beep(200);
     setLEDs(Yellow);
     delay(200);
 
-    beepSync(-1);
+    
     setLEDs(Black);
     delay(800);
   }
-  beep(1000, BeepHigh);
+  beep(1000);
 }
 
 //A  NON Blocking sequence to run before we stop the match
