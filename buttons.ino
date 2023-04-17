@@ -4,7 +4,7 @@ void handleStartButton() {
   if (buttonPressed(Start) && !buttonPressed(Pause)) {
     Serial.println("Start");
     if (!matchTimerLoopRunning() && matchState == Ready) {
-      startMatch();
+      startingMatch();
     } else if (matchState == Paused) {
       resumeMatch();
     }
@@ -26,7 +26,7 @@ void handleStopButton() {
     if (matchTimerLoopRunning()) {
       stopMatch();
     } else {
-      //  Reset the system state
+      readyMatch();
     }
   }
 }
@@ -34,7 +34,6 @@ void handleStopButton() {
 void handlePitManualSolenoidButton() {
   if (buttonPressed(PitSolenoid)) {
     Serial.println("PitSolenoid");
-    
     enablePitSolenoid();
   } else {
     if (pitState != Opening) {
@@ -46,26 +45,29 @@ void handlePitManualSolenoidButton() {
 void handlePitManualOpenButton() {
   if (buttonPressed(PitOpen) && (!buttonPressed(PitClose))) {
     Serial.println("PitOpen");
-    
     handlePitManualOpen();
+  } else {
+    if (pitState != Opening) {
+      digitalWrite(PIN_PIT_OPEN_LED, LOW);
+    }
   }
 }
 
 void handlePitManualCloseButton() {
   if (buttonPressed(PitClose) && !buttonPressed(PitOpen)) {
     Serial.println("PitClose");
-    
+    // digitalWrite(PIN_PIT_CLOSE_LED,HIGH);
     handlePitManualClose();
+  } else {
+    if (pitState != Closing) {
+      digitalWrite(PIN_PIT_CLOSE_LED, LOW);
+    }
   }
 }
 
 void tryStopMotor() {
-  Serial.print("!buttonPressed(PitOpen)");
-  Serial.println(!buttonPressed(PitOpen));
-  Serial.print("!buttonPressed(PitClose)");
-  Serial.println(!buttonPressed(PitClose));
+
   if (buttonPressed(PitOpen) && buttonPressed(PitClose)) {
-    
     stopPitMotor();
   }
 }
@@ -80,7 +82,7 @@ void handleAddTimeButton() {
       addTimeButtonTimeout = t.setTimeout(
         []() {
           Serial.println("Add Time Button pressed!");
-          addedTime += 5;
+          addedTime += ADDED_TIME_DURATION;
           addTimeButtonTimeout = 0;
         },
         100);
@@ -90,4 +92,31 @@ void handleAddTimeButton() {
 
 void handlePitDisableButton() {
   pitEnabled = digitalRead(PIN_PIT_DISABLE) == LOW;
+}
+
+
+bool buttonPressed(Button button) {
+  switch (button) {
+    case Start:
+      // Serial.println("Btn Start");
+      return digitalRead(PIN_BUTTON_START) == HIGH;
+    case Pause:
+      // Serial.println("Btn Pause");
+      return digitalRead(PIN_BUTTON_PAUSE) == HIGH;
+    case Stop:
+      // Serial.println("Btn Stop");
+      return digitalRead(PIN_BUTTON_STOP) == HIGH;
+    case AddTime:
+      // Serial.println("Btn AddTime");
+      return digitalRead(PIN_BUTTON_ADD_TIME) == HIGH;
+    case PitOpen:
+      // Serial.println("Btn PitOpen");
+      return digitalRead(PIN_PIT_OPEN) == HIGH;
+    case PitClose:
+      // Serial.println("Btn PitClose");
+      return digitalRead(PIN_PIT_CLOSE) == HIGH;
+    case PitSolenoid:
+      // Serial.println("Btn PitSolenoid");
+      return digitalRead(PIN_PIT_SOLENOID_ENABLE) == HIGH;
+  }
 }

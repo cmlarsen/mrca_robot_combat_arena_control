@@ -51,10 +51,10 @@ A3 = Closing LED
 A2 = Opening LED
 
 CAT5
-Blue
-Green
-Blue Stripe
-Green Stripe
+Blue - B
+Blue Stripe - A
+Green: Gnd
+Green Stripe: 5v
 
 **/
 
@@ -73,23 +73,25 @@ Green Stripe
 
 
 // PINS - Output
-#define PIN_PIT_OPEN_LED 11
-#define PIN_PIT_CLOSE_LED 12
+#define PIN_PIT_OPEN_LED 16
+#define PIN_PIT_CLOSE_LED 17
 #define PIN_RS485_ENABLE 2
-#define PIN_RGB_LED_STRIP 13
+#define PIN_RGB_LED_STRIP 3
 #define PIN_MOTOR_ESC 15
 #define PIN_RELAY_SOLENOID 14
+#define PIN_PIT_ENABLE_LED 12
 
 // PINS - I2C
 #define PIN_I2C_SDA 18
 #define PIN_I2C_SCL 19
 
 // System Config
-#define MATCH_DURATION 10               //seconds
-#define PIT_OPEN_AFTER_TIME 5           //seconds into the match that the pit will open
-#define STOP_SEQUENCE_DURATION 3        //seconds
-#define ADDED_TIME_DURATION 3           //seconds
-#define NUM_LEDS 20                     //How many LEDs are there in the strip?
+#define MATCH_DURATION 15         //seconds
+#define PIT_OPEN_AT_REMAINING_TIME 5     //seconds into the match that the pit will open
+#define STOP_SEQUENCE_DURATION 3  //seconds
+#define ADDED_TIME_DURATION 5     //seconds
+#define COUNTDOWN_DURATION 3
+#define NUM_LEDS 200                    //How many LEDs are there in the strip?
 #define PIT_RELAY_ENABLE_DURATION 3000  //milliseconds - how long to enable the pit relay when it automatically triggers
 
 // OLED Size
@@ -106,6 +108,7 @@ Green Stripe
 
 // State Enums
 enum MatchState {
+  Starting,
   Ready,
   Running,
   Paused,
@@ -138,16 +141,17 @@ enum PitState {
   Closing,
   Closed
 };
-#define PIT_MOTOR_PWM_FWD 2000
-#define PIT_MOTOR_PWM_REV 1000
-#define PIT_MOTOR_PWM_STOP 1500
+#define PIT_MOTOR_PWM_FWD 1000
+#define PIT_MOTOR_PWM_REV 2000
+#define PIT_MOTOR_PWM_STOP 1440
 
 // Application State
 MatchState matchState = Ready;
 unsigned short matchIntervalId = 0;
+int countdownTime = 0;
 int elapsedTime = 0;
 int addedTime = 0;
-int totalMatchDuration = 0;
+int totalMatchDuration = MATCH_DURATION;
 int remainingTime = 0;
 bool pitEnabled = true;
 PitState pitState = Closed;
@@ -188,6 +192,7 @@ void setup() {
   pinMode(PIN_PIT_CLOSE_LED, OUTPUT);
   pinMode(PIN_RS485_ENABLE, OUTPUT);
   pinMode(PIN_RGB_LED_STRIP, OUTPUT);
+  pinMode(PIN_PIT_ENABLE_LED, OUTPUT);
   pinMode(PIN_MOTOR_ESC, OUTPUT);
   pinMode(PIN_RELAY_SOLENOID, OUTPUT);
   digitalWrite(PIN_RS485_ENABLE, HIGH);
@@ -201,7 +206,7 @@ void setup() {
     for (;;)
       ;
   }
-  delay(2000);
+  delay(500);
   display.clearDisplay();
   display.setTextSize(2);
   display.setTextColor(WHITE);
@@ -210,8 +215,7 @@ void setup() {
   display.println("Michigan");
   display.println("Mashup");
   display.display();
-  clockDisplay.print(1234, DEC);
-  clockDisplay.writeDisplay();
+  updateTimerDisplay(8888);
   delay(1000);
   display.clearDisplay();
   clockDisplay.clear();
@@ -219,15 +223,13 @@ void setup() {
   display.display();
   setLEDs(White);
   remainingTime = MATCH_DURATION;
-  updateTimerDisplay();
+  updateTimerDisplay(remainingTime);
   Serial.println("Done Setup");
 }
 
 // Main Loop
 void loop() {
   t.handle();  //timers
-  totalMatchDuration = MATCH_DURATION + addedTime;
-  remainingTime = totalMatchDuration - elapsedTime;
 
   // Input Handlers
   handleStartButton();
@@ -242,38 +244,74 @@ void loop() {
 
   tryStopMotor();
 
-  if (matchState == Ready) {
-  }
+
+
 
   // If the match is running and we haven't started the loop, start it.
-  if (matchState == Running && matchIntervalId == 0) {
+
+  if ((matchState == Starting || matchState == Running) && matchIntervalId == 0) {
     matchIntervalId = t.setInterval(matchLoop, 1000);
   }
 
+  // if (matchState == Ready || matchState == Paused){
+  if (addedTime >0){
+    remainingTime +=addedTime;
+    totalMatchDuration +=addedTime;
+    addedTime = 0;
+  }
+  
+  
   updateOLED();
-  updateTimerDisplay();
+  Serial.print(elapsedTime);
+  Serial.print(" ");
+  Serial.print(totalMatchDuration);
+  Serial.print(" ");
+  Serial.println(remainingTime);
+  updateTimerDisplay(remainingTime);
   ET.sendData();
-  delay(50);
+  delay(28);
 }
 
 // The main loop for the match logic.
 void matchLoop() {
-  Serial.print("Match state: ");
-  Serial.println(matchState);
+  if (matchState == Starting) {
+    countdownTime += 1;
+  }
   if (matchState == Running) {
     elapsedTime += 1;
-
-    Serial.print("Tick: ");
-    Serial.println(elapsedTime);
-    // updateTimerDisplay();
   }
-  if (pitEnabled && elapsedTime == PIT_OPEN_AFTER_TIME) {
+
+  
+  if (matchState == Running) {
+    remainingTime = totalMatchDuration - elapsedTime;
+  }
+  if (matchState == Starting) {
+    remainingTime = COUNTDOWN_DURATION - countdownTime;
+  }
+
+
+  if (matchState == Starting && countdownTime == COUNTDOWN_DURATION) {
+    countdownTime = 0;
+    elapsedTime = 0;
+    remainingTime = totalMatchDuration;
+    startMatch();
+  }
+
+
+  if (remainingTime == 0) {
+    stopMatch();
+  }
+
+  if (pitEnabled && remainingTime == PIT_OPEN_AT_REMAINING_TIME){
     handleOpenPit();
   }
-  if (elapsedTime == MATCH_DURATION - STOP_SEQUENCE_DURATION) {
-    runPreStopSequence();
+  if(pitEnabled){
+    digitalWrite(PIN_PIT_ENABLE_LED, HIGH);
+  } else {
+    digitalWrite(PIN_PIT_ENABLE_LED, LOW);
+    
   }
-  if (remainingTime <= 0) {
-    stopMatch();
+  if (elapsedTime == totalMatchDuration - STOP_SEQUENCE_DURATION) {
+    runPreStopSequence();
   }
 }

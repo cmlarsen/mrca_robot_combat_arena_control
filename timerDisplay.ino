@@ -1,11 +1,11 @@
 // ########## Remote Timer Pod
 
 
-void updateTimerDisplay() {
-  Serial.print("Clock Display:");
+void updateTimerDisplay(int time) {
 
-  int displayTime = formatTimerDuration(remainingTime);
-  Serial.println(displayTime);
+  int displayTime = formatTimerDuration(time);
+  // Serial.print("Clock Display:");
+  // Serial.println(displayTime);
   clockDisplay.drawColon(true);
   clockDisplay.print(displayTime, DEC);
   clockDisplay.writeDisplay();

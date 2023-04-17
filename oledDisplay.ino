@@ -17,6 +17,9 @@ void updateOLED() {
   display.setTextSize(2);
   display.setCursor(0, 16);
   switch (matchState) {
+    case Starting:
+      display.print("Starting");
+      break;
     case Running:
       display.print("Running");
       break;

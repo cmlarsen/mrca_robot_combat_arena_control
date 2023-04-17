@@ -24,7 +24,7 @@ void setLEDs(Color color) {
       Serial.println("Blue");
       break;
     case Yellow:
-      fill_solid(leds, NUM_LEDS, CRGB::Blue);
+      fill_solid(leds, NUM_LEDS, CRGB::Yellow);
       // fill_solid(leds, NUM_LEDS, CRGB::Yellow);
       Serial.println("yellow");
       break;
@@ -33,7 +33,7 @@ void setLEDs(Color color) {
       Serial.println("black");
       break;
     case White:
-      fill_solid(leds, NUM_LEDS, CRGB::Blue);
+      fill_solid(leds, NUM_LEDS, CRGB::White);
       // fill_solid(leds, NUM_LEDS, CRGB::White);
       Serial.println("white");
       break;
