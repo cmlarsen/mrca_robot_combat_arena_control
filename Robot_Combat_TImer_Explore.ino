@@ -17,11 +17,11 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
 
 
   INPUTS:
-  Pit Power (Enable/Disable) Switch - disables the pit automatically opening.
-  Open Pit - releases solenoid viarelay and enables pit motor via Relay?
+  Pit Enable/Disable Switch - disables the pit automatically opening.
+  Open Pit - releases solenoid via relay and enables pit motor via ESC
   Start  -starts match
   Pause - pause match, press start to resume
-  Stop - stops match;
+  Stop/Reset - stops match;
   Add Time - adds 5 seconds per press;
 
   * These aren't connected to arduino
@@ -34,11 +34,20 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
   Pit Solenoid Relay
   Buzzer
 
-  TODO:
-  - Use the easyTransfer TX/RX examples to send messages to slaves via RS485
-  - Add button combo to set 3 min match
-  - Make sure timer updates when time is added.
-  - Add LEDs for Pit Open/Pit Close
+
+  BULKHEAD_CONNECTOR_PINOUT:
+  1: Red, 12v Gearmotor A 
+  2: Black, 12v Gearmotor B
+  3: Red, Wasp ESC Limit Switch
+  4: Black, Common GND &  Wasp ESC Limit Switch
+  5: Red, +12v Solenoid #1
+  6: Black, GND Solenoid #1
+  7: Yellow, +12v Solenoid #2
+  8: White, GND Soleonoid #2
+  9: Red, +12v RGB LEDs
+  10: Yellow,  5v Data, RGB LEDs
+
+  
 **/
 
 
