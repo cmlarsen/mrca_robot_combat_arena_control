@@ -47,6 +47,7 @@ void readyMatch() {
   addedTime = 0;
   elapsedTime = 0;
   matchState = Ready;
+  cumlativeAddedTime = 0;
   setLEDs(White);
   remainingTime = MATCH_DURATION;
   // updateTimerDisplay();

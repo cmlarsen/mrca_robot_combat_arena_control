@@ -6,6 +6,15 @@
 #include <AsyncTimer.h>
 #include <Wire.h>
 #include <Servo.h>
+
+/**
+TODO: 
+- Set Match Length
+- Set Pit Open/Close motor duration
+- Set Pit Open offset from end of match
+
+**/
+
 /**
 AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
 
@@ -19,14 +28,12 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
   INPUTS:
   Pit Enable/Disable Switch - disables the pit automatically opening.
   Open Pit - releases solenoid via relay and enables pit motor via ESC
+  Pit Solenoid - releases solenoid via relay
+  Close Pit - enables pit motor via ESC
   Start  -starts match
   Pause - pause match, press start to resume
   Stop/Reset - stops match;
   Add Time - adds 5 seconds per press;
-
-  * These aren't connected to arduino
-  Close Pit - Nothing, wired to the motors.
-  Master Power - Disables power to system
 
   OUTPUTS:
   OLED
@@ -34,73 +41,56 @@ AsyncTimer Docs: https://github.com/Aasim-A/AsyncTimer
   Pit Solenoid Relay
   Buzzer
 
-
   BULKHEAD_CONNECTOR_PINOUT:
-  1: Red, 12v Gearmotor A 
-  2: Black, 12v Gearmotor B
-  3: Red, Wasp ESC Limit Switch
-  4: Black, Common GND &  Wasp ESC Limit Switch
-  5: Red, +12v Solenoid #1
-  6: Black, GND Solenoid #1
-  7: Yellow, +12v Solenoid #2
-  8: White, GND Soleonoid #2
-  9: Red, +12v RGB LEDs
-  10: Yellow,  5v Data, RGB LEDs
+  1, Red, 12v Gearmotor A 
+  2, Black, 12v Gearmotor B
+  3, Red, Wasp ESC Limit Switch
+  4, Black, Common GND &  Wasp ESC Limit Switch
+  5, Red, +12v Solenoid #1
+  6, Black, GND Solenoid #1
+  7, Yellow, +12v Solenoid #2
+  8, White, GND Soleonoid #2
+  9, Red, +12v RGB LEDs
+  10, Yellow,  5v Data for RGB LEDs
 
-  
-**/
-
-
-/**
-Pin 
-2 = RS485 Enable
-3 = RGBLED data
-4 = Disable pit
-A3 = Closing LED
-A2 = Opening LED
-
-CAT5
-Blue - B
-Blue Stripe - A
-Green: Gnd
-Green Stripe: 5v
+  CAT5:
+  Blue - B
+  Blue Stripe - A
+  Green: Gnd
+  Green Stripe: 5v
 
 **/
 
 
 
-// PINS - Input
-#define PIN_BUTTON_PAUSE 9
-#define PIN_BUTTON_START 8
-#define PIN_BUTTON_ADD_TIME 10
-#define PIN_BUTTON_STOP 11
+// PINS
+#define PIN_RS485_ENABLE 2
+#define PIN_RGB_LED_STRIP 3
+#define PIN_PIT_DISABLE 4
 #define PIN_PIT_CLOSE 5
 #define PIN_PIT_SOLENOID_ENABLE 6
 #define PIN_PIT_OPEN 7
-#define PIN_PIT_DISABLE 4
-
-
-
-// PINS - Output
+#define PIN_BUTTON_START 8
+#define PIN_BUTTON_PAUSE 9
+#define PIN_BUTTON_ADD_TIME 10
+#define PIN_BUTTON_STOP 11
+#define PIN_12 12 //Unused
+#define PIN_PIT_ENABLE_LED 13
+#define PIN_RELAY_SOLENOID 14
+#define PIN_MOTOR_ESC 15
 #define PIN_PIT_OPEN_LED 16
 #define PIN_PIT_CLOSE_LED 17
-#define PIN_RS485_ENABLE 2
-#define PIN_RGB_LED_STRIP 3
-#define PIN_MOTOR_ESC 15
-#define PIN_RELAY_SOLENOID 14
-#define PIN_PIT_ENABLE_LED 12
-
-// PINS - I2C
 #define PIN_I2C_SDA 18
 #define PIN_I2C_SCL 19
 
+
 // System Config
-#define MATCH_DURATION 15         //seconds
-#define PIT_OPEN_AT_REMAINING_TIME 5     //seconds into the match that the pit will open
-#define STOP_SEQUENCE_DURATION 3  //seconds
-#define ADDED_TIME_DURATION 5     //seconds
+#define MATCH_DURATION 120           //seconds
+#define PIT_OPEN_AT_REMAINING_TIME 45  //seconds into the match that the pit will open
+#define STOP_SEQUENCE_DURATION 3      //seconds
+#define ADDED_TIME_DURATION 5         //seconds
 #define COUNTDOWN_DURATION 3
-#define NUM_LEDS 200                    //How many LEDs are there in the strip?
+#define NUM_LEDS 300                    //How many LEDs are there in the strip?
 #define PIT_RELAY_ENABLE_DURATION 3000  //milliseconds - how long to enable the pit relay when it automatically triggers
 
 // OLED Size
@@ -110,10 +100,6 @@ Green Stripe: 5v
 // I2C Addresses
 #define OLED_ADDRESS 0x3C             //console OLED
 #define CLOCK_DISPLAY_1_ADDRESS 0x70  //EO Side timer display
-
-// Notes
-#define BeepHigh 740  //F#
-#define BeepLow 554   //C#
 
 // State Enums
 enum MatchState {
@@ -150,9 +136,10 @@ enum PitState {
   Closing,
   Closed
 };
+
 #define PIT_MOTOR_PWM_FWD 1000
 #define PIT_MOTOR_PWM_REV 2000
-#define PIT_MOTOR_PWM_STOP 1440
+#define PIT_MOTOR_PWM_STOP 1540 // removes a little motor squeal at stop
 
 // Application State
 MatchState matchState = Ready;
@@ -160,6 +147,7 @@ unsigned short matchIntervalId = 0;
 int countdownTime = 0;
 int elapsedTime = 0;
 int addedTime = 0;
+int cumlativeAddedTime = 0;
 int totalMatchDuration = MATCH_DURATION;
 int remainingTime = 0;
 bool pitEnabled = true;
@@ -233,7 +221,9 @@ void setup() {
   setLEDs(White);
   remainingTime = MATCH_DURATION;
   updateTimerDisplay(remainingTime);
+  stopPitMotor();
   Serial.println("Done Setup");
+
 }
 
 // Main Loop
@@ -257,25 +247,23 @@ void loop() {
 
 
   // If the match is running and we haven't started the loop, start it.
-
   if ((matchState == Starting || matchState == Running) && matchIntervalId == 0) {
     matchIntervalId = t.setInterval(matchLoop, 1000);
   }
 
-  // if (matchState == Ready || matchState == Paused){
-  if (addedTime >0){
-    remainingTime +=addedTime;
-    totalMatchDuration +=addedTime;
+
+  if (addedTime > 0) {
+    remainingTime += addedTime;
+    totalMatchDuration += addedTime;
     addedTime = 0;
   }
-  
+  if (pitEnabled) {
+    digitalWrite(PIN_PIT_ENABLE_LED, HIGH);
+  } else {
+    digitalWrite(PIN_PIT_ENABLE_LED, LOW);
+  }
   
   updateOLED();
-  Serial.print(elapsedTime);
-  Serial.print(" ");
-  Serial.print(totalMatchDuration);
-  Serial.print(" ");
-  Serial.println(remainingTime);
   updateTimerDisplay(remainingTime);
   ET.sendData();
   delay(28);
@@ -290,7 +278,7 @@ void matchLoop() {
     elapsedTime += 1;
   }
 
-  
+
   if (matchState == Running) {
     remainingTime = totalMatchDuration - elapsedTime;
   }
@@ -311,15 +299,11 @@ void matchLoop() {
     stopMatch();
   }
 
-  if (pitEnabled && remainingTime == PIT_OPEN_AT_REMAINING_TIME){
+  if (pitEnabled && remainingTime == PIT_OPEN_AT_REMAINING_TIME) {
     handleOpenPit();
   }
-  if(pitEnabled){
-    digitalWrite(PIN_PIT_ENABLE_LED, HIGH);
-  } else {
-    digitalWrite(PIN_PIT_ENABLE_LED, LOW);
-    
-  }
+
+
   if (elapsedTime == totalMatchDuration - STOP_SEQUENCE_DURATION) {
     runPreStopSequence();
   }

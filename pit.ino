@@ -1,14 +1,21 @@
 
 void handleOpenPit() {
   setPitState(Opening);
+
+  
   enablePitSolenoid();
-  fowardPitMotor();
+
+
   t.setTimeout([=]() {
-    disablePitSolenoid();
-    stopPitMotor();
-    setPitState(Open);
+    fowardPitMotor();
+    t.setTimeout([=]() {
+      disablePitSolenoid();
+      stopPitMotor();
+      setPitState(Open);
+    },
+                 PIT_RELAY_ENABLE_DURATION);
   },
-               PIT_RELAY_ENABLE_DURATION);
+               250);
 }
 
 void handlePitManualClose() {

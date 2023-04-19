@@ -6,12 +6,23 @@ void updateOLED() {
   display.setCursor(0, 8);
   int h = floor(remainingTime / 60);
   int m = remainingTime % 60;
+  display.print("Time ");
   display.print(h);
   display.print(":");
   if (m < 10) {
     display.print(0);
   }
-  display.println(m);
+  display.print(m);
+  display.setCursor(65, 8);
+  display.print("+");
+  int cM = floor(cumlativeAddedTime / 60);
+  int cS = cumlativeAddedTime % 60;
+  display.print(cM);
+  display.print(":");
+  if (cS < 10) {
+    display.print(0);
+  }
+  display.print(cS);
 
   // Display Match State
   display.setTextSize(2);

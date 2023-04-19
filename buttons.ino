@@ -31,36 +31,53 @@ void handleStopButton() {
   }
 }
 
+bool wasPressedPitSolenoid = false;
 void handlePitManualSolenoidButton() {
   if (buttonPressed(PitSolenoid)) {
     Serial.println("PitSolenoid");
     enablePitSolenoid();
+    wasPressedPitSolenoid = true;
   } else {
-    if (pitState != Opening) {
+    if (wasPressedPitSolenoid) {
       disablePitSolenoid();
+      wasPressedPitSolenoid = false;
     }
   }
 }
 
+
+bool wasPressedPitOpen = false;
 void handlePitManualOpenButton() {
   if (buttonPressed(PitOpen) && (!buttonPressed(PitClose))) {
+    digitalWrite(PIN_PIT_OPEN_LED, HIGH);
     Serial.println("PitOpen");
-    handlePitManualOpen();
+    enablePitSolenoid();
+    t.setTimeout([]() {
+      handlePitManualOpen();
+      wasPressedPitOpen = true;
+    },
+                 100);
   } else {
-    if (pitState != Opening) {
+    if (wasPressedPitOpen) {
       digitalWrite(PIN_PIT_OPEN_LED, LOW);
+      wasPressedPitOpen = false;
+      disablePitSolenoid();
+      stopPitMotor();
     }
   }
 }
 
+bool wasPressedPitClose = false;
 void handlePitManualCloseButton() {
   if (buttonPressed(PitClose) && !buttonPressed(PitOpen)) {
     Serial.println("PitClose");
-    // digitalWrite(PIN_PIT_CLOSE_LED,HIGH);
     handlePitManualClose();
+    wasPressedPitClose = true;
   } else {
-    if (pitState != Closing) {
+    if (wasPressedPitClose) {
       digitalWrite(PIN_PIT_CLOSE_LED, LOW);
+      stopPitMotor();
+      wasPressedPitClose = false;
     }
   }
 }
@@ -83,6 +100,7 @@ void handleAddTimeButton() {
         []() {
           Serial.println("Add Time Button pressed!");
           addedTime += ADDED_TIME_DURATION;
+          cumlativeAddedTime +=ADDED_TIME_DURATION;
           addTimeButtonTimeout = 0;
         },
         100);
